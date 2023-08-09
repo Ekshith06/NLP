@@ -1,1 +1,140 @@
+import speech_recognition as sr
+import os
+import time
+import datetime
+import numpy as np
+import playaudio
+import pyaudio
+from gtts import gTTS
+import random
+import io
 
+class ChatBot():
+    def _init_(self, name):
+        print("-- Starting up", name, "--")
+        self.name = name
+        self.text = ""
+
+    def speech_to_text(self):
+        recognizer = sr.Recognizer()
+        with sr.Microphone() as mic:
+            print("Speak..")
+            audio = recognizer.listen(mic)
+            self.text = "ERROR"
+        try:
+            self.text = recognizer.recognize_google(audio)
+            print("Me  --> ", self.text)
+        except:
+            print("Me  -->  ERROR")
+
+    def detect_emotion(self):
+        # Replace this part with your emotion detection model or API call
+        # Example: Call an emotion detection API with self.text to get emotions
+        emotions = ["happy", "sad", "neutral", "angry", "surprised"]
+        return "neutral"  # Replace this with the detected emotion
+
+    def generate_response(self, user_input):
+        # Checking for specific disease-related queries
+        if "disease" in user_input.lower():
+            res = self.get_disease_information(user_input)
+        else:
+            res = self.get_default_response()
+
+        return res
+
+    def get_disease_information(self, user_input):
+        # Retrieve disease information from the knowledge base
+        # You can use a database, or predefined responses here
+        disease_info = {
+            "breast cancer": {
+                "precautions": "Some general precautions for breast cancer may include:\n- Regular self-examination\n- Yearly mammograms for women over 40\n- Maintaining a healthy lifestyle with a balanced diet and regular exercise\n- Avoiding smoking and excessive alcohol consumption\n- Consulting a healthcare professional for risk assessment and advice.\n",
+                "remedies": "It is essential to remember that there are no DIY remedies for breast cancer. It is a serious medical condition that requires professional diagnosis and treatment. If you suspect any symptoms or risk factors, please consult a qualified healthcare professional for proper evaluation and guidance.\n"
+            },
+            "diabetes": {
+                "precautions": "Some general precautions for diabetes may include:\n- Following a balanced diet with controlled carbohydrate intake\n- Regular physical activity\n- Monitoring blood sugar levels\n- Taking prescribed medications as directed by a healthcare professional\n- Regular check-ups with a doctor.\n",
+                "remedies": "The management of diabetes often involves lifestyle changes, medications, and insulin therapy if necessary. It is crucial to work closely with a healthcare professional to develop a personalized treatment plan based on individual needs.\n"
+            },
+            "Malaria": {
+                "precautions": "Some general precautions for malaria may include:\n- Remove or empty any standing water around your home, as these are potential breeding grounds for mosquitoes..\n",
+                "remedies": "Antimalarial Medications: Treatment for malaria typically involves the use of antimalarial medications prescribed by a healthcare professional. The specific medication and duration of treatment depend on the type of malaria and its severity..\n"
+            },
+            # Add more diseases and their corresponding precautions and remedies
+        }
+
+        for disease, info in disease_info.items():
+            if disease.lower() in user_input.lower():
+                if "precautions" in user_input.lower():
+                    return info["precautions"]
+                elif "remedies" in user_input.lower():
+                    return info["remedies"]
+                else:
+                    return f"I'm here to provide general information about {disease}. Please consult a medical professional for personalized advice and treatment options."
+
+        return "I'm sorry, I don't have information about that disease at the moment."
+    
+    def textspeech(self,text):
+        speaker = gTTS(text=text, lang="en", slow=False)
+
+        speaker.save("res.mp3")
+        statbuf = os.stat("res.mp3")
+        mbytes = statbuf.st_size / 1024
+        duration = mbytes / 200
+        os.system('start res.mp3')  
+        time.sleep(int(50*duration))
+        os.remove("res.mp3")
+   
+    def text_to_speech(self,audio_string):
+        print("AI--> ", audio_string)
+        k=self.textspeech(audio_string)
+        
+
+    
+
+# Example usage
+    def wake_up(self, text):
+        return True if self.name in text.lower() else False
+
+    @staticmethod
+    def action_time():
+        return datetime.datetime.now().time().strftime('%H:%M')
+
+    @staticmethod
+    def get_default_response():
+        return "I'm sorry, I don't have an appropriate response for that query."
+
+if __name__ == "__main__":
+    ai = ChatBot(name="AI")
+
+    ex = True
+    while ex:
+        ai.speech_to_text()
+
+        if ai.wake_up(ai.text) is True:
+            res = "Hello, I am the AI. What can I do for you?"
+
+        elif "time" in ai.text:
+            res = ai.action_time()
+        elif any(i in ai.text for i in ["hi", "hello","good morning"]):
+            res = np.random.choice(["Hello how can I help you","Welcome iam listening!!"])
+
+        elif any(i in ai.text for i in ["thank", "thanks"]):
+            res = np.random.choice(["You're welcome!", "Anytime!", "No problem!", "Cool!", "I'm here if you need me!", "Mention not"])
+
+        elif any(i in ai.text for i in ["exit", "close"]):
+            res = np.random.choice(["Tata", "Have a good day", "Bye", "Goodbye", "Hope to meet soon", "Peace out!"])
+            ex = False
+        else:
+            if ai.text == "ERROR":
+                res = "Sorry, come again?"
+            else:
+                # Detect Emotion and Provide Response
+                emotion = ai.detect_emotion()
+                if emotion == "neutral":
+                    response = ai.generate_response(ai.text)
+                    res = response
+                else:
+                    res = f"I sense that you are feeling {emotion}. Is there anything specific you'd like to talk about?"
+
+        ai.text_to_speech(res)
+
+    print("-- Closing down --")
